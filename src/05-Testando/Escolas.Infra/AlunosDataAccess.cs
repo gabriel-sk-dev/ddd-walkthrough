@@ -55,7 +55,10 @@ namespace Escolas.API.Infra
 
         public void Salvar(Aluno aluno)
         {
-            //Como saber o que foi alterado no aluno? Foi adicionado nova inscrição? removido? Anulado uma divida?
+            //Como saber o que foi alterado no aluno? 
+            //Foi adicionado nova inscrição? removido inscrição? 
+            //Anulado uma divida?
+            //Alterado algum dado do aluno?
         }
 
     }
