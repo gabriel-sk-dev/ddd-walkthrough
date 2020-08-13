@@ -28,13 +28,12 @@ namespace Escolas.Dominio.Alunos
             return new Inscricao(Guid.NewGuid().ToString(), aluno, turma, DateTime.Now, tipoPagamento);
         }
 
-        public IEnumerable<Divida> GerarDividas()
+        public IEnumerable<Divida> GerarDividas(decimal valorMensal)
         {
             var vencimento = InscritoEm.AddMonths(1);
             for (int i = 0; i < Turma.ConfiguracaoInscricao.DuracaoEmMeses; i++)
             {
-                vencimento.AddMonths(i);
-                yield return Divida.Criar(this, vencimento, Turma.CalcularValorMensal(this));
+                yield return Divida.Criar(this, vencimento.AddMonths(i), valorMensal);
             }
         }
 

@@ -16,6 +16,10 @@ namespace Escolas.Infra
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfiguration(new TurmaConfiguracao());
+            modelBuilder.ApplyConfiguration(new TurmaDescontoBaseConfiguracao());
+            modelBuilder.ApplyConfiguration(new TurmaDescontoSimplesConfiguracao());
+            modelBuilder.ApplyConfiguration(new TurmaDescontoDistanciaConfiguracao());
+            modelBuilder.ApplyConfiguration(new TurmaConfiguracaoValorConfiguracao());
             modelBuilder.ApplyConfiguration(new InscricaoConfiguracao());
             modelBuilder.ApplyConfiguration(new DividaConfiguracao());
             modelBuilder.ApplyConfiguration(new AlunoConfiguracao());

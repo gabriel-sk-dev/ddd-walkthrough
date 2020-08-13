@@ -1,5 +1,9 @@
 ﻿using Escolas.Dominio.Alunos;
+using Escolas.Dominio.Turmas.Descontos;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Escolas.Dominio.Turmas
 {
@@ -24,13 +28,15 @@ namespace Escolas.Dominio.Turmas
         public int TotalInscritos { get; private set; }
         public bool Aberta { get; private set; }
 
-        public static Turma CriarFechadaSemDescontos(string descricao, int limiteAlunos, int idadeMinima, int duracaoEmMeses, decimal valorMensal)
+        public static Turma CriarFechada(string descricao, int limiteAlunos, int idadeMinima, int duracaoEmMeses, decimal valorMensal)
         {
-            return new Turma(Guid.NewGuid().ToString(),
+            var id = Guid.NewGuid().ToString();
+            return new Turma(
+                id,
                 descricao,
                 new ConfiguracaoInscricao(limiteAlunos, idadeMinima, duracaoEmMeses),
                 0,
-                new ConfiguracaoValor(valorMensal, 0m, 0m, 0m, 0m, 0m),
+                new ConfiguracaoValor(id, valorMensal, 0m, new List<DescontoBase>()),
                 false);
         }
 
@@ -39,29 +45,26 @@ namespace Escolas.Dominio.Turmas
             Aberta = true;
         }
 
-        public void AplicarDescontoMulheres(decimal valorEmPercentual)
-        {
-            ConfiguracaoValor = new ConfiguracaoValor(ConfiguracaoValor.ValorMensal, valorEmPercentual, ConfiguracaoValor.DescontoCriancas, ConfiguracaoValor.DescontoPagamentoAntecipado, ConfiguracaoValor.DescontoDistancia, ConfiguracaoValor.DescontoMaximo);
-        }
-
-        public void AplicarDescontoCriancas(decimal valorEmPercentual)
-        {
-            ConfiguracaoValor = new ConfiguracaoValor(ConfiguracaoValor.ValorMensal, ConfiguracaoValor.DescontoMulheres, valorEmPercentual, ConfiguracaoValor.DescontoPagamentoAntecipado, ConfiguracaoValor.DescontoDistancia, ConfiguracaoValor.DescontoMaximo);
-        }
-
-        public void AplicarDescontoPagamentoAntecipado(decimal valorEmPercentual)
-        {
-            ConfiguracaoValor = new ConfiguracaoValor(ConfiguracaoValor.ValorMensal, ConfiguracaoValor.DescontoMulheres, ConfiguracaoValor.DescontoCriancas, valorEmPercentual, ConfiguracaoValor.DescontoDistancia, ConfiguracaoValor.DescontoMaximo);
-        }
-
-        public void AplicarDescontoDistancia(decimal valorEmPercentual)
-        {
-            ConfiguracaoValor = new ConfiguracaoValor(ConfiguracaoValor.ValorMensal, ConfiguracaoValor.DescontoMulheres, ConfiguracaoValor.DescontoCriancas, ConfiguracaoValor.DescontoDistancia, valorEmPercentual, ConfiguracaoValor.DescontoMaximo);
-        }
-
         public void ConfigurarDescontoMaximo(decimal valorEmPercentual)
         {
-            ConfiguracaoValor = new ConfiguracaoValor(ConfiguracaoValor.ValorMensal, ConfiguracaoValor.DescontoMulheres, ConfiguracaoValor.DescontoCriancas, ConfiguracaoValor.DescontoDistancia, ConfiguracaoValor.DescontoDistancia, valorEmPercentual);
+            ConfiguracaoValor.ConfigurarValorMaximo(valorEmPercentual);
+        }
+
+        public void AplicarDesconto(IRegraDesconto regra)
+        {
+            var regraId = Guid.NewGuid().ToString();
+            var regraDesconto = regra switch 
+            {
+                RegraDescontoPorDistancia regraDescontoAntecipado => new DescontoPorDistancia(regraId, regraDescontoAntecipado.GetType().Name, regraDescontoAntecipado.LimiteDistancia, regraDescontoAntecipado.PercentualDesconto),
+                _ => new DescontoSimples(regraId, regra.GetType().Name, regra.PercentualDesconto) as DescontoBase
+            };
+            ConfiguracaoValor.RegistrarDesconto(regraDesconto);
+        }
+
+        public async Task<decimal> CalcularValorMensalAsync(Inscricao inscricao)
+        {
+            var desconto = await ConfiguracaoValor.CalcularPercentualDescontoAsync(inscricao);
+            return ConfiguracaoValor.CalcularValorFinal(desconto);
         }
 
         internal void AceitaInscricao(Aluno aluno)
@@ -74,65 +77,9 @@ namespace Escolas.Dominio.Turmas
                 throw new InvalidOperationException("Turma fechada para inscrições");
         }
 
-        internal decimal CalcularValorMensal(Inscricao inscricao)
-        {
-            var desconto = 0m;
-            if (inscricao.Aluno.Sexo == Aluno.ESexo.Feminino)
-                desconto += ConfiguracaoValor.DescontoMulheres;
-            if (inscricao.Aluno.IdadeHoje <= 12)
-                desconto += ConfiguracaoValor.DescontoMulheres;
-            if(inscricao.TipoPagamento == Inscricao.ETipoPagamento.Antecipado)
-                desconto += ConfiguracaoValor.DescontoMulheres;
-            if(inscricao.Aluno.Endereco.DistanciaAteEscola > 5)
-                desconto += ConfiguracaoValor.DescontoDistancia;
-            if (desconto > ConfiguracaoValor.DescontoMaximo)
-                desconto = ConfiguracaoValor.DescontoMaximo;
-            return ConfiguracaoValor.ValorMensal - (ConfiguracaoValor.ValorMensal * (desconto /100m));
-        }
-
         internal void ConfirmarInscricao()
         {
             TotalInscritos++;
-        }
-
-    }
-
-    public sealed class ConfiguracaoInscricao
-    {
-        public ConfiguracaoInscricao(int limiteAlunos, int idadeMinima, int duracaoEmMeses)
-        {
-            LimiteAlunos = limiteAlunos;
-            IdadeMinima = idadeMinima;
-            DuracaoEmMeses = duracaoEmMeses;
-        }
-
-        public int LimiteAlunos { get; }
-        public int IdadeMinima { get; }
-        public int DuracaoEmMeses { get; }
-    }
-
-    public sealed class ConfiguracaoValor
-    {
-        public ConfiguracaoValor(decimal valorMensal, decimal descontoMulheres, decimal descontoCriancas, decimal descontoPagamentoAntecipado, decimal descontoDistancia, decimal descontoMaximo)
-        {
-            ValorMensal = valorMensal;
-            DescontoMulheres = descontoMulheres;
-            DescontoCriancas = descontoCriancas;
-            DescontoPagamentoAntecipado = descontoPagamentoAntecipado;
-            DescontoDistancia = descontoDistancia;
-            DescontoMaximo = descontoMaximo;
-        }
-
-        public decimal ValorMensal { get; }
-        public decimal DescontoMulheres { get; }
-        public decimal DescontoCriancas { get; }
-        public decimal DescontoPagamentoAntecipado { get; }
-        public decimal DescontoDistancia { get; }
-        public decimal DescontoMaximo { get; }
-
-        internal decimal CalcularValorDesconto(decimal valorPercentual)
-        {
-            return ValorMensal * (valorPercentual / 100m);
-        }
+        } 
     }
 }

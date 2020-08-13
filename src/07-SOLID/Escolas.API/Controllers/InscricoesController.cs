@@ -44,7 +44,7 @@ namespace Escolas.API.Controllers
                 if (turma == null)
                     return BadRequest("Nenhuma turma encontrada");
 
-                var inscricao = aluno.RealizarInscricao(turma, novaInscricao.TipoPagamento.ToEnum<Inscricao.ETipoPagamento>());
+                var inscricao = await aluno.RealizarInscricaoAsync(turma, novaInscricao.TipoPagamento.ToEnum<Inscricao.ETipoPagamento>());
 
                 //Enviar email
 

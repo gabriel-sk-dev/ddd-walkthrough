@@ -14,12 +14,19 @@ namespace Escolas.Infra.Repositorios
             _contexto = contexto;
         }
 
+        public async Task AdicionarAsync(Aluno aluno)
+        {
+            await _contexto.Alunos.AddAsync(aluno);
+        }
+
         public async Task<Aluno> RecuperarAsync(string id)
         {
             return await _contexto
                 .Alunos
                 .Include(c=> c.Inscricoes)
                     .ThenInclude(c=> c.Turma)
+                        .ThenInclude(c=> c.ConfiguracaoValor)
+                            .ThenInclude(c => c.Descontos)
                 .Include(c=>c.Dividas)
                 .Where(c => c.Id == id)
                 .FirstOrDefaultAsync();

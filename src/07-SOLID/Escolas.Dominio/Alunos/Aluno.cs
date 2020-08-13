@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Escolas.Dominio.Alunos
 {
@@ -41,14 +42,15 @@ namespace Escolas.Dominio.Alunos
             return new Aluno(Guid.NewGuid().ToString(), nome, email, dataNascimento, sexo, endereco, new List<Inscricao>(), new List<Divida>());
         }
 
-        public Inscricao RealizarInscricao(Turma turma, Inscricao.ETipoPagamento tipoPagamento)
+        public async Task<Inscricao> RealizarInscricaoAsync(Turma turma, Inscricao.ETipoPagamento tipoPagamento)
         {
             turma.AceitaInscricao(this);
             
             var inscricao = Inscricao.Criar(this, turma, tipoPagamento);
             _inscricoes.Add(inscricao);
 
-            _dividas.AddRange(inscricao.GerarDividas());
+            var valorMensal = await turma.CalcularValorMensalAsync(inscricao);
+            _dividas.AddRange(inscricao.GerarDividas(valorMensal));
 
             turma.ConfirmarInscricao();
 

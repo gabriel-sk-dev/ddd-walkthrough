@@ -14,9 +14,19 @@ namespace Escolas.Infra.Repositorios
             _contexto = contexto;
         }
 
+        public async Task AdicionarAsync(Turma turma)
+        {
+            await _contexto.Turmas.AddAsync(turma);
+        }
+
         public async Task<Turma> RecuperarAsync(string id)
         {
-            return await _contexto.Turmas.Where(c => c.Id == id).FirstOrDefaultAsync();
+            return await _contexto
+                .Turmas
+                .Include(c=> c.ConfiguracaoValor)
+                    .ThenInclude(c=> c.Descontos)
+                .Where(c => c.Id == id)
+                .FirstOrDefaultAsync();
         }
     }
 }
